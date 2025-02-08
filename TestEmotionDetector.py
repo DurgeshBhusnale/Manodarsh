@@ -3,6 +3,7 @@ import numpy as np
 from keras.models import model_from_json
 from collections import deque
 import time
+from database_utils import store_emotion_data, create_database, add_user
 
 emotion_dict = {0: "Angry", 1: "Disgusted", 2: "Fearful", 3: "Happy", 4: "Neutral", 5: "Sad", 6: "Surprised"}
 emotion_mapping = {  # Define emotion mapping to scores
@@ -22,6 +23,8 @@ cap = cv2.VideoCapture(0)
 time_window = deque(maxlen=60)  # 1-minute time window (adjust as needed)
 last_score_calculation = time.time()
 score_calculation_interval = 5  # Calculate score every 5 seconds
+
+create_database()  # Create the database and tables if they don't exist.
 
 def calculate_depression_score(emotions):
     if not emotions:
@@ -51,10 +54,16 @@ while True:
 
         time_window.append(predicted_emotion)  # Add detected emotion to the time window
 
+    user_id = 1  # Placeholder! Replace with the actual user ID from Phase 3.
+
+
     # Calculate and display depression score periodically
     if time.time() - last_score_calculation >= score_calculation_interval:
         depression_score = calculate_depression_score(time_window)
         print(f"Depression Score: {depression_score:.2f}")  # Print with 2 decimal places
+
+        store_emotion_data(user_id, depression_score)  # Store in the database
+
         last_score_calculation = time.time()
         cv2.putText(frame, f"Depression Score: {depression_score:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
 
