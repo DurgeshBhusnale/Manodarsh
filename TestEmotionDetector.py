@@ -26,7 +26,7 @@ with open("face_recognition_model.pkl", "rb") as f:
 print("Loaded face recognition model from disk")
 
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 time_window = deque(maxlen=60)  # 1-minute time window
 last_score_calculation = time.time()
 score_calculation_interval = 5  # Calculate score every 5 seconds
