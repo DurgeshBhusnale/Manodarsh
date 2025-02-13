@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Emotion Monitoring</title>
+</head>
+<body>
+    <h1>Soldier Data</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for soldier in soldiers %}
+            <tr>
+                <td>{{ soldier[0] }}</td>
+                <td>{{ soldier[1] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Daily Averages ({{ today }})</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>Average Score</th>
+                <th>Image</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for avg in daily_averages %}
+            <tr>
+                <td>{{ avg[0] }}</td>
+                <td>{{ avg[1] }}</td>
+                <td>
+                    {% if avg[2] %}
+                        <img src="data:image/jpeg;base64,{{ avg[2] | b64encode }}" alt="Representative Image" width="100">
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+
+    <button id="start_day">Start Day</button>
+    <button id="end_day">End Day</button>
+
+    <script>
+        const startDayButton = document.getElementById('start_day');
+        const endDayButton = document.getElementById('end_day');
+
+        startDayButton.addEventListener('click', () => {
+            fetch('/start_day', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => console.log(data.message));
+        });
+
+        endDayButton.addEventListener('click', () => {
+            fetch('/end_day', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => console.log(data.message))
+                .then(() => {
+                    // Reload the page to display updated daily averages
+                    location.reload(); 
+                });
+        });
+    </script>
+</body>
+</html>

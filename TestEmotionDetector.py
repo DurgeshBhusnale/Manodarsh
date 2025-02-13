@@ -6,6 +6,9 @@ import time
 from database_utils import store_emotion_data, create_database, add_user, get_user_id_from_name
 import pickle
 import face_recognition
+import base64
+import requests
+import datetime
 
 emotion_dict = {0: "Angry", 1: "Disgusted", 2: "Fearful", 3: "Happy", 4: "Neutral", 5: "Sad", 6: "Surprised"}
 emotion_mapping = {  # Define emotion mapping to scores (weighted)
@@ -24,7 +27,6 @@ print("Loaded emotion model from disk")
 with open("face_recognition_model.pkl", "rb") as f:
     known_face_encodings, known_face_names = pickle.load(f)
 print("Loaded face recognition model from disk")
-
 
 cap = cv2.VideoCapture(1)
 time_window = deque(maxlen=60)  # 1-minute time window
@@ -72,6 +74,7 @@ while True:
     num_faces = face_detector.detectMultiScale(gray_frame, scaleFactor=1.3, minNeighbors=5)
 
     user_id = None  # Initialize user_id outside the loop
+    image_base64 = None # Initialize image_base64
 
     for (x, y, w, h) in num_faces:
         cv2.rectangle(frame, (x, y - 50), (x + w, y + h + 10), (0, 255, 0), 4)
@@ -87,6 +90,12 @@ while True:
             user_id = get_user_id_from_name(recognized_name)
             if user_id:
                 time_window.append(predicted_emotion)
+
+                # Capture and encode image (only once per user per frame):
+                ret, img_encoded = cv2.imencode('.jpg', roi_gray_frame) #Encode the image
+                if ret:
+                    image_base64 = base64.b64encode(img_encoded).decode('utf-8')
+
             else:
                 print(f"User ID not found for {recognized_name}")
         else:
@@ -97,10 +106,18 @@ while True:
         depression_score = calculate_depression_score(time_window)
         print(f"Depression Score: {depression_score:.2f}")
 
-        if user_id is not None:  # Check if user_id is defined and not None
-            data_points_to_store.append((user_id, depression_score))
-            store_emotion_data(data_points_to_store)
-            data_points_to_store = []
+        if user_id is not None and image_base64 is not None:  # Check if user_id and image are available
+            data = {
+                "user_id": user_id,
+                "score": depression_score,
+                "date": str(datetime.date.today()),
+                "image": image_base64  # Send encoded image
+            }
+            response = requests.post("http://127.0.0.1:5000/store_data", json=data) #Send data to the flask backend
+
+            if response.status_code != 200:
+                print(f"Error sending data to backend: {response.text}")
+
         cv2.putText(frame, f"Depression Score: {depression_score:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
 
         last_score_calculation = time.time()
