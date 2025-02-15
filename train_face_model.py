@@ -1,6 +1,7 @@
 import face_recognition
 import os
 import pickle
+import argparse
 
 def train_face_recognition_model(data_dir, model_filename="face_recognition_model.pkl"):
     known_face_encodings = []
@@ -24,5 +25,8 @@ def train_face_recognition_model(data_dir, model_filename="face_recognition_mode
     print(f"Face recognition model trained and saved to {model_filename}")
 
 if __name__ == "__main__":
-    data_dir = "face_data"  # Path to your face images directory
-    train_face_recognition_model(data_dir)  # Train the model
+    parser = argparse.ArgumentParser(description="Train face recognition model.")
+    parser.add_argument("--data_dir", default="face_data", help="Path to the face images directory.") # Add argument
+    args = parser.parse_args()
+
+    train_face_recognition_model(args.data_dir)  # Use argument

@@ -10,6 +10,7 @@
             <tr>
                 <th>ID</th>
                 <th>Name</th>
+                <th>Image</th> 
             </tr>
         </thead>
         <tbody>
@@ -17,6 +18,7 @@
             <tr>
                 <td>{{ soldier[0] }}</td>
                 <td>{{ soldier[1] }}</td>
+                <td><img src="{{ soldier[5] }}" alt="User Image" width="100"></td>
             </tr>
             {% endfor %}
         </tbody>
@@ -49,6 +51,8 @@
 
     <button id="start_day">Start Day</button>
     <button id="end_day">End Day</button>
+    <br><br>
+    <a href="/add_soldier">Add New Soldier</a> 
 
     <script>
         const startDayButton = document.getElementById('start_day');

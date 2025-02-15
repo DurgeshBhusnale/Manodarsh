@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Soldier</title>
+</head>
+<body>
+    <h1>Add New Soldier</h1>
+    <form id="addSoldierForm" action="/add_user" method="POST" enctype="multipart/form-data">
+        <label for="name">Name:</label>
+        <input type="text" name="name" id="name" required><br><br>
+
+        <label for="soldier_id">Soldier ID:</label>
+        <input type="text" name="soldier_id" id="soldier_id" required><br><br>
+
+        <label for="branch">Branch:</label>
+        <input type="text" name="branch" id="branch" required><br><br>
+
+        <label for="captain_phone">Captain's Phone:</label>
+        <input type="tel" name="captain_phone" id="captain_phone"><br><br>
+
+        <label for="wife_phone">Wife's Phone:</label>
+        <input type="tel" name="wife_phone" id="wife_phone"><br><br>
+
+        <!-- <label for="image">Representative Image:</label>
+        <input type="file" name="image" id="image" accept="image/*" required><br><br> -->
+
+        <!-- <button type="button" id="collectImages">Collect Images</button>  -->
+        <br><br>
+
+        <div id="imageCollectionStatus"></div>  <div id="trainingStatus"></div> <input type="submit" value="Add Soldier">
+    </form>
+    <button type="button" id="trainModelButton">Train Model</button>
+
+    <script>
+        const addSoldierForm = document.getElementById('addSoldierForm');
+        const collectImagesButton = document.getElementById('collectImages');
+        const imageCollectionStatus = document.getElementById('imageCollectionStatus');
+        const trainingStatus = document.getElementById('trainingStatus');
+        const trainModelButton = document.getElementById('trainModelButton');
+
+        // collectImagesButton.addEventListener('click', () => {
+        //     imageCollectionStatus.textContent = "Image collection started...";
+        // });
+
+        addSoldierForm.addEventListener('submit', (event) => {
+            event.preventDefault(); // Prevent default form submission
+
+            const formData = new FormData(addSoldierForm);
+
+            fetch('/add_user', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url; // Handle redirect
+                } else {
+                    return response.json();
+                }
+            })
+            .then(data => {
+                if (data && data.message === "User created successfully") { // Check if data exists
+                    alert("Soldier added successfully!");
+                    addSoldierForm.reset();
+                } else if (data && data.message === "Image collection failed") {
+                    alert("Image collection failed!");
+                } else if (data) { // Check if data exists
+                    alert("Error adding soldier: " + data.message);
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+            });
+        });
+
+        trainModelButton.addEventListener('click', () => {
+        fetch('/train_model', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                trainingStatus.textContent = data.message;  // Display training message
+                console.log(data.message);
+            })
+            .catch(error => {
+                trainingStatus.textContent = "Error starting training.";
+                console.error("Error:", error);
+            });
+         });
+
+    </script>
+</body>
+</html>

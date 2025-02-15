@@ -16,7 +16,12 @@ def create_database():
             mycursor.execute('''
                 CREATE TABLE IF NOT EXISTS users (
                     id INT AUTO_INCREMENT PRIMARY KEY,
-                    name VARCHAR(255) UNIQUE NOT NULL
+                    name VARCHAR(255) UNIQUE NOT NULL,
+                    soldier_id VARCHAR(255),  -- Added soldier_id
+                    branch VARCHAR(255),      -- Added branch
+                    captain_phone VARCHAR(255), -- Added captain_phone
+                    wife_phone VARCHAR(255),    -- Added wife_phone
+                    user_image VARCHAR(255)  -- Store the image PATH here
                 )
             ''')
 
@@ -25,7 +30,7 @@ def create_database():
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     user_id INT,
                     score FLOAT,
-                    date DATE,  -- Added date column
+                    date DATE,
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )
@@ -37,15 +42,17 @@ def create_database():
                     user_id INT,
                     date DATE,
                     average_score FLOAT,
-                    representative_image MEDIUMBLOB,
+                    representative_image VARCHAR(255),
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )
             ''')
 
-
             mydb.commit()
             print("Database and tables created/checked successfully")
     except mysql.connector.Error as err:
+        print(f"MySQL Error: {err}")  # Print the full MySQL error
+        print(f"Error Number: {err.errno}")  # Print the error number
+        print(f"SQL State: {err.sqlstate}") # Print SQL state
         if err.errno == 1045:  # Incorrect username/password
             print("Incorrect username or password")
         elif err.errno == 1049:  # Unknown database
@@ -53,7 +60,7 @@ def create_database():
         else:
             print(f"Something went wrong: {err}")
 
-def add_user(name, image_base64):
+def add_user(name, soldier_id, branch, captain_phone, wife_phone, image_path):
     try:
         with mysql.connector.connect(
             host="localhost",
@@ -62,9 +69,8 @@ def add_user(name, image_base64):
             database="emotion_database"
         ) as mydb:
             mycursor = mydb.cursor()
-            sql = "INSERT INTO users (name, user_image) VALUES (%s, %s)"  # Include user_image
-            image_bytes = base64.b64decode(image_base64) #Decode image
-            val = (name, image_bytes)
+            sql = "INSERT INTO users (name, soldier_id, branch, captain_phone, wife_phone, user_image) VALUES (%s, %s, %s, %s, %s, %s)"
+            val = (name, soldier_id, branch, captain_phone, wife_phone, image_path) # Store image path
             mycursor.execute(sql, val)
             mydb.commit()
             print(f"User '{name}' added successfully.")
@@ -136,14 +142,13 @@ def end_day(date, representative_images): # Receive representative images here
             mycursor.execute(sql, (date,))
 
             # 2. Store representative images:
-            for user_id, image_base64 in representative_images.items():
-                image_bytes = base64.b64decode(image_base64)
+            for user_id, image_path in representative_images.items():
                 sql = """
                 UPDATE daily_averages
                 SET representative_image = %s
                 WHERE user_id = %s AND date = %s;
                 """
-                val = (image_bytes, user_id, date)
+                val = (image_path, user_id, date)
                 mycursor.execute(sql, val)
 
             mydb.commit()
