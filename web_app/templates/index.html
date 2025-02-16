@@ -10,7 +10,7 @@
             <tr>
                 <th>ID</th>
                 <th>Name</th>
-                <th>Image</th> 
+                <th>Image</th>
             </tr>
         </thead>
         <tbody>
@@ -48,20 +48,39 @@
         </tbody>
     </table>
 
+    <form id="startDayForm" method="POST" action="/start_day">  <label for="date">Date:</label>
+        <input type="date" id="date" name="date" required>  <button type="submit">Start Day</button>  </form>
 
-    <button id="start_day">Start Day</button>
     <button id="end_day">End Day</button>
     <br><br>
-    <a href="/add_soldier">Add New Soldier</a> 
+    <a href="/add_soldier">Add New Soldier</a>
 
     <script>
-        const startDayButton = document.getElementById('start_day');
+        const startDayForm = document.getElementById('startDayForm'); // Select the form
         const endDayButton = document.getElementById('end_day');
 
-        startDayButton.addEventListener('click', () => {
-            fetch('/start_day', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => console.log(data.message));
+        startDayForm.addEventListener('submit', (event) => {  // Modified to handle form submission
+            event.preventDefault(); // Prevent default form submission
+
+            const formData = new FormData(startDayForm); // Create FormData object
+
+            fetch('/start_day', {
+                method: 'POST',
+                body: formData // Include form data in the request body
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.message);
+                if (response.ok) { // Check if the response is ok (status code in the 200-299 range)
+                    // Optionally, you can reset the form or update the UI
+                    startDayForm.reset();
+                } else {
+                    alert(data.message); // Display error message
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+            });
         });
 
         endDayButton.addEventListener('click', () => {
@@ -69,8 +88,7 @@
                 .then(response => response.json())
                 .then(data => console.log(data.message))
                 .then(() => {
-                    // Reload the page to display updated daily averages
-                    location.reload(); 
+                    location.reload();
                 });
         });
     </script>
