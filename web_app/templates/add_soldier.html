@@ -1,49 +1,59 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Soldier</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
-    <h1>Add New Soldier</h1>
-    <form id="addSoldierForm" action="/add_user" method="POST" enctype="multipart/form-data">
-        <label for="name">Name:</label>
-        <input type="text" name="name" id="name" required><br><br>
+<body class="bg-gray-100 p-4">
+    <div class="container mx-auto">
+        <h1 class="text-3xl font-bold mb-4 text-center">Add New Soldier</h1>
 
-        <label for="soldier_id">Soldier ID:</label>
-        <input type="text" name="soldier_id" id="soldier_id" required><br><br>
+        <form id="addSoldierForm" action="/add_user" method="POST" enctype="multipart/form-data" class="max-w-md mx-auto bg-white p-6 rounded shadow-md">
+            <div class="mb-4">
+                <label for="name" class="block text-gray-700 font-bold mb-2">Name:</label>
+                <input type="text" name="name" id="name" required class="border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
 
-        <label for="branch">Branch:</label>
-        <input type="text" name="branch" id="branch" required><br><br>
+            <div class="mb-4">
+                <label for="soldier_id" class="block text-gray-700 font-bold mb-2">Soldier ID:</label>
+                <input type="text" name="soldier_id" id="soldier_id" required class="border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
 
-        <label for="captain_phone">Captain's Phone:</label>
-        <input type="tel" name="captain_phone" id="captain_phone"><br><br>
+            <div class="mb-4">
+                <label for="branch" class="block text-gray-700 font-bold mb-2">Branch:</label>
+                <input type="text" name="branch" id="branch" required class="border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
 
-        <label for="wife_phone">Wife's Phone:</label>
-        <input type="tel" name="wife_phone" id="wife_phone"><br><br>
+            <div class="mb-4">
+                <label for="captain_phone" class="block text-gray-700 font-bold mb-2">Captain's Phone:</label>
+                <input type="tel" name="captain_phone" id="captain_phone" class="border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
 
-        <!-- <label for="image">Representative Image:</label>
-        <input type="file" name="image" id="image" accept="image/*" required><br><br> -->
+            <div class="mb-4">
+                <label for="wife_phone" class="block text-gray-700 font-bold mb-2">Wife's Phone:</label>
+                <input type="tel" name="wife_phone" id="wife_phone" class="border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
 
-        <!-- <button type="button" id="collectImages">Collect Images</button>  -->
-        <br><br>
+            <div class="flex justify-center">
+                <input type="submit" value="Add Soldier" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+            </div>
+        </form>
 
-        <div id="imageCollectionStatus"></div>  <div id="trainingStatus"></div> <input type="submit" value="Add Soldier">
-    </form>
-    <button type="button" id="trainModelButton">Train Model</button>
+        <div class="mt-4 text-center">
+            <button type="button" id="trainModelButton" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Train Model</button>
+            <div id="trainingStatus" class="mt-2"></div>
+        </div>
+    </div>
 
     <script>
         const addSoldierForm = document.getElementById('addSoldierForm');
-        const collectImagesButton = document.getElementById('collectImages');
-        const imageCollectionStatus = document.getElementById('imageCollectionStatus');
-        const trainingStatus = document.getElementById('trainingStatus');
         const trainModelButton = document.getElementById('trainModelButton');
-
-        // collectImagesButton.addEventListener('click', () => {
-        //     imageCollectionStatus.textContent = "Image collection started...";
-        // });
+        const trainingStatus = document.getElementById('trainingStatus');
 
         addSoldierForm.addEventListener('submit', (event) => {
-            event.preventDefault(); // Prevent default form submission
+            event.preventDefault();
 
             const formData = new FormData(addSoldierForm);
 
@@ -53,18 +63,18 @@
             })
             .then(response => {
                 if (response.redirected) {
-                    window.location.href = response.url; // Handle redirect
+                    window.location.href = response.url;
                 } else {
                     return response.json();
                 }
             })
             .then(data => {
-                if (data && data.message === "User created successfully") { // Check if data exists
+                if (data && data.message === "User created successfully") {
                     alert("Soldier added successfully!");
                     addSoldierForm.reset();
                 } else if (data && data.message === "Image collection failed") {
                     alert("Image collection failed!");
-                } else if (data) { // Check if data exists
+                } else if (data) {
                     alert("Error adding soldier: " + data.message);
                 }
             })
@@ -74,18 +84,19 @@
         });
 
         trainModelButton.addEventListener('click', () => {
-        fetch('/train_model', { method: 'POST' })
+            fetch('/train_model', { method: 'POST' })
             .then(response => response.json())
             .then(data => {
-                trainingStatus.textContent = data.message;  // Display training message
-                console.log(data.message);
+                trainingStatus.textContent = data.message;
+                if (data.message.startsWith("Model training failed")) { // Check for error message
+                    alert(data.message); // Or display it in a more user-friendly way
+                }
             })
             .catch(error => {
                 trainingStatus.textContent = "Error starting training.";
                 console.error("Error:", error);
             });
-         });
-
+        });
     </script>
 </body>
 </html>

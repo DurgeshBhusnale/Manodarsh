@@ -47,6 +47,15 @@ def create_database():
                 )
             ''')
 
+            mycursor.execute('''
+                CREATE TABLE IF NOT EXISTS two_day_averages (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT,
+                    date DATE,
+                    average_score FLOAT,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            ''')
             mydb.commit()
             print("Database and tables created/checked successfully")
     except mysql.connector.Error as err:
@@ -99,6 +108,28 @@ def get_user_id_from_name(name):
     except mysql.connector.Error as err:
         print(f"Something went wrong: {err}")
         return None
+def get_user_phone_numbers(user_id):  # Plural: numbers
+    """Retrieves both captain's and wife's phone numbers from the database."""
+    try:
+        with connect_db() as mydb:
+            mycursor = mydb.cursor()
+            sql = "SELECT captain_phone, wife_phone FROM users WHERE id = %s"  # Get both columns
+            val = (user_id,)
+            mycursor.execute(sql, val)
+            result = mycursor.fetchone()
+            if result:
+                captain_phone, wife_phone = result
+                phone_numbers = []
+                if captain_phone:
+                    phone_numbers.append(captain_phone)
+                if wife_phone:
+                    phone_numbers.append(wife_phone)
+                return phone_numbers  # Return the list
+            else:
+                return []  # No phone numbers found
+    except mysql.connector.Error as err:
+        print(f"Error getting user phone numbers: {err}")
+        return []
 
 def get_soldier_data():  # This function was missing!
     try:
@@ -175,6 +206,71 @@ def start_day(date):
     # For now, this just prints a message.  You might want to add logic here later.
     print(f"Starting day: {date}")
     return True  # Indicate success
+def get_2_day_average(user_id, date):
+    """Calculates the 2-day average emotion score for a user."""
+    try:
+        with connect_db() as mydb:
+            mycursor = mydb.cursor()
+
+            # Calculate the date for yesterday
+            yesterday = date - datetime.timedelta(days=1)
+
+            # SQL query to get scores for today and yesterday
+            sql = """
+                SELECT AVG(score)
+                FROM emotion_data
+                WHERE user_id = %s AND date IN (%s, %s)
+            """
+            val = (user_id, date, yesterday)
+            mycursor.execute(sql, val)
+            result = mycursor.fetchone()
+
+            if result and result[0] is not None:  # Check if a result was found
+                return result[0]
+            else:
+                return None  # No data found for the user on those days
+
+    except mysql.connector.Error as err:
+        print(f"Error getting 2-day average: {err}")
+        return None
+
+
+def store_2_day_average(user_id, date, average_score):
+    try:
+        with connect_db() as mydb:
+            mycursor = mydb.cursor()
+            sql = "INSERT INTO two_day_averages (user_id, date, average_score) VALUES (%s, %s, %s)"
+            val = (user_id, date, average_score)
+            mycursor.execute(sql, val)
+            mydb.commit()
+            return True
+    except mysql.connector.Error as err:
+        print(f"Error storing data: {err}")
+        mydb.rollback()
+        return False
+
+
+def check_notification_needed(user_id, date, threshold=3.0):  # Default threshold
+    try:
+        with connect_db() as mydb:
+            mycursor = mydb.cursor()
+            sql = "SELECT average_score FROM two_day_averages WHERE user_id = %s AND date = %s"
+            val = (user_id, date)
+            mycursor.execute(sql, val)
+            result = mycursor.fetchone()
+
+            if result and result[0] is not None:
+                average_score = result[0]
+                if average_score < threshold:
+                    return True  # Notification needed
+                else:
+                    return False  # No notification needed
+            else:
+                return False  # No data found, no notification needed
+
+    except mysql.connector.Error as err:
+        print(f"Error checking notification: {err}")
+        return False
 
 def connect_db():  # Context manager for db connection
     return mysql.connector.connect(

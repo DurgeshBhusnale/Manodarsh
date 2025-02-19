@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Soldier Data</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="container mx-auto">
+        <div class="mb-4">
+            <button id="show-depressed" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2">Show Depressed Soldiers Today</button>
+            <button id="show-all" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Show All Soldiers</button>
+        </div>
+
+        <h1 class="text-3xl font-bold mb-4">Soldier Data</h1>
+
+        <table class="table-auto w-full border-collapse border border-gray-300">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="border border-gray-300 px-4 py-2">ID</th>
+                    <th class="border border-gray-300 px-4 py-2">Name</th>
+                    <th class="border border-gray-300 px-4 py-2">Soldier ID</th>
+                    <th class="border border-gray-300 px-4 py-2">Branch</th>
+                    <th class="border border-gray-300 px-4 py-2">Captain Phone</th>
+                    <th class="border border-gray-300 px-4 py-2">Wife Phone</th>
+                    <th class="border border-gray-300 px-4 py-2">Image</th> 
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const showAllButton = document.getElementById('show-all');
+        const showDepressedButton = document.getElementById('show-depressed');
+        const tableBody = document.querySelector('table tbody');
+
+        function populateTable(data) {
+            tableBody.innerHTML = ''; // Clear the table
+            data.forEach(soldier => {
+                const row = tableBody.insertRow();
+                const idCell = row.insertCell();
+                const nameCell = row.insertCell();
+                const soldierIdCell = row.insertCell();
+                const branchCell = row.insertCell();
+                const captainPhoneCell = row.insertCell();
+                const wifePhoneCell = row.insertCell();
+                const imageCell = row.insertCell(); // Image cell
+
+                idCell.textContent = soldier.id;
+                nameCell.textContent = soldier.name;
+                soldierIdCell.textContent = soldier.soldier_id;
+                branchCell.textContent = soldier.branch;
+                captainPhoneCell.textContent = soldier.captain_phone;
+                wifePhoneCell.textContent = soldier.wife_phone;
+
+                // Display image:
+                const img = document.createElement('img');
+                const imagePath = `/static/${soldier.user_image}/${soldier.name}_Stand_near_to_camera_0.jpg`; // Example
+                // OR if you want to display the first image of each pose
+                // const imagePath = `/static/${soldier.user_image}/${soldier.name}_${pose.replace(' ', '_')}_0.jpg`; // Example
+
+                img.src = imagePath; // Set the src
+                img.alt = soldier.name + "'s photo";
+                img.classList.add('w-20', 'h-20', 'object-cover');
+                imageCell.appendChild(img);
+
+                img.onerror = () => {  // Handle image loading errors
+                    img.src = 'D:/Emotion_detection_v2/static/default_image.png';  // Set a default image
+                    console.error(`Failed to load image: ${imagePath}`);
+                };
+            });
+        }
+
+        showAllButton.addEventListener('click', () => {
+            fetch('/soldier_data')
+                .then(response => response.json())
+                .then(data => populateTable(data));
+        });
+
+        showDepressedButton.addEventListener('click', () => {
+            fetch('/depressed_soldiers_today')
+                .then(response => response.json())
+                .then(data => populateTable(data));
+        });
+
+        // Initial data load:
+        fetch('/soldier_data')
+            .then(response => response.json())
+            .then(data => populateTable(data));
+
+    </script>
+</body>
+</html>

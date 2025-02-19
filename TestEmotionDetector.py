@@ -9,6 +9,7 @@ import face_recognition
 import base64
 import requests
 import datetime
+import os
 
 emotion_dict = {0: "Angry", 1: "Disgusted", 2: "Fearful", 3: "Happy", 4: "Neutral", 5: "Sad", 6: "Surprised"}
 emotion_mapping = {  # Define emotion mapping to scores (weighted)
@@ -24,7 +25,11 @@ emotion_model = model_from_json(loaded_model_json)
 emotion_model.load_weights("model/emotion_model.h5")
 print("Loaded emotion model from disk")
 
-with open("face_recognition_model.pkl", "rb") as f:
+# model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "face_recognition_model.pkl"))  # Absolute path
+model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "face_recognition_model.pkl"))  # Removed ".."
+print(model_path)
+
+with open(model_path, "rb") as f:
     known_face_encodings, known_face_names = pickle.load(f)
 print("Loaded face recognition model from disk")
 

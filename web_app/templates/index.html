@@ -1,63 +1,33 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Emotion Monitoring</title>
-</head>
-<body>
-    <h1>Soldier Data</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Image</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for soldier in soldiers %}
-            <tr>
-                <td>{{ soldier[0] }}</td>
-                <td>{{ soldier[1] }}</td>
-                <td><img src="{{ soldier[5] }}" alt="User Image" width="100"></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <h2>Daily Averages ({{ today }})</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>User ID</th>
-                <th>Average Score</th>
-                <th>Image</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for avg in daily_averages %}
-            <tr>
-                <td>{{ avg[0] }}</td>
-                <td>{{ avg[1] }}</td>
-                <td>
-                    {% if avg[2] %}
-                        <img src="data:image/jpeg;base64,{{ avg[2] | b64encode }}" alt="Representative Image" width="100">
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <form id="startDayForm" method="POST" action="/start_day">  <label for="date">Date:</label>
-        <input type="date" id="date" name="date" required>  <button type="submit">Start Day</button>  </form>
-
-    <button id="end_day">End Day</button>
-    <br><br>
-    <a href="/add_soldier">Add New Soldier</a>
-
+    <head>
+        <title>Emotion Monitoring</title>
+        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-gray-100 p-4">
+        <div class="container mx-auto">  <h1 class="text-3xl font-bold mb-4 text-center">Emotion Monitoring</h1>
+    
+            <div class="flex justify-center mb-4">  <form id="startDayForm" method="POST" action="/start_day" class="mr-4">
+                    <label for="date" class="block text-gray-700 font-bold mb-2">Date:</label>
+                    <input type="date" id="date" name="date" required class="border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Start Day</button>
+                </form>
+    
+                <form id="endDayForm" method="POST" action="/end_day">
+                    <label for="end_date" class="block text-gray-700 font-bold mb-2">Date:</label>
+                    <input type="date" id="end_date" name="date" required class="border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">End Day</button>
+                </form>
+            </div>
+    
+            <div class="flex justify-center"> <a href="/add_soldier" class="inline-block bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mr-2">Add New Soldier</a>
+                <a href="/data_view" class="inline-block bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">View Soldiers Data</a>
+            </div>
+        </div> 
+    
     <script>
         const startDayForm = document.getElementById('startDayForm'); // Select the form
-        const endDayButton = document.getElementById('end_day');
+        const endDayForm = document.getElementById('endDayForm');
 
         startDayForm.addEventListener('submit', (event) => {  // Modified to handle form submission
             event.preventDefault(); // Prevent default form submission
@@ -83,13 +53,22 @@
             });
         });
 
-        endDayButton.addEventListener('click', () => {
-            fetch('/end_day', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => console.log(data.message))
-                .then(() => {
-                    location.reload();
-                });
+        endDayForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const formData = new FormData(endDayForm);
+
+            fetch('/end_day', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.message);
+                location.reload(); 
+            })
+            .catch(error => {
+                console.error("Error:", error);
+            });
         });
     </script>
 </body>
