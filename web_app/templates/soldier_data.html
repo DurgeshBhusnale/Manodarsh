@@ -56,9 +56,7 @@
 
                 // Display image:
                 const img = document.createElement('img');
-                const imagePath = `/static/${soldier.user_image}/${soldier.name}_Stand_near_to_camera_0.jpg`; // Example
-                // OR if you want to display the first image of each pose
-                // const imagePath = `/static/${soldier.user_image}/${soldier.name}_${pose.replace(' ', '_')}_0.jpg`; // Example
+                const imagePath = `../../static/${soldier.user_image}`;
 
                 img.src = imagePath; // Set the src
                 img.alt = soldier.name + "'s photo";

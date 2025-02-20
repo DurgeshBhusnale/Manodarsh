@@ -19,7 +19,7 @@ import getpass
 my_env = os.environ.copy()  # Create a copy of the current environment
 my_env['PYTHONPATH'] = "D:\Emotion_detection_v2\.venv\Lib\site-packages"  # Or similar, depends on your system
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../static', static_url_path='/static')
 
 # Global variable to store the process object
 emotion_detector_process = None
@@ -291,7 +291,7 @@ def get_soldier_data():
                 "branch": soldier[3],
                 "captain_phone": soldier[4],
                 "wife_phone": soldier[5],
-                "image_path": soldier[6],
+                "user_image": soldier[6],
                 # Add other fields as needed
             })
 
@@ -303,17 +303,19 @@ def get_soldier_data():
 
 @app.route("/depressed_soldiers_today")
 def get_depressed_soldiers_today():
-    today = datetime.date.today()
+    today = datetime.date.today()  # Use date.today()
     try:
         with connect_db() as mydb:
             mycursor = mydb.cursor()
             mycursor.execute("SELECT user_id FROM daily_averages WHERE date = %s", (today,))
-            depressed_user_ids = [row[0] for row in mycursor.fetchall()] # Get all the user IDs
+            depressed_user_ids = [row[0] for row in mycursor.fetchall()]
 
         depressed_soldiers = []
+        seen_user_ids = set()  # Keep track of user IDs we've already processed
+
         for user_id in depressed_user_ids:
-            if check_notification_needed(user_id, today): # Check if notification needed for the user on this date.
-                with connect_db() as mydb: # Need to connect again to get the user data.
+            if user_id not in seen_user_ids and check_notification_needed(user_id, today):  # Check if user_id is already in the set and check notification
+                with connect_db() as mydb:
                     mycursor = mydb.cursor()
                     mycursor.execute("SELECT id, name, soldier_id, branch, captain_phone, wife_phone, user_image FROM users WHERE id = %s", (user_id,))
                     soldier = mycursor.fetchone()
@@ -325,8 +327,9 @@ def get_depressed_soldiers_today():
                             "branch": soldier[3],
                             "captain_phone": soldier[4],
                             "wife_phone": soldier[5],
-                            "image_path": soldier[6],
+                            "user_image": soldier[6],
                         })
+                        seen_user_ids.add(user_id)  # Add the user ID to the set
 
         return jsonify(depressed_soldiers)
 
