@@ -164,13 +164,13 @@ def end_day(date, representative_images): # Receive representative images here
 
             # 1. Calculate daily averages:
             sql = """
-            INSERT INTO daily_averages (user_id, date, average_score)
-            SELECT user_id, date, AVG(score)
-            FROM emotion_data
-            WHERE date = %s
-            GROUP BY user_id, date
+                INSERT INTO daily_averages (user_id, date, average_score)
+                SELECT user_id, %s, AVG(score)
+                FROM emotion_data
+                WHERE date = %s
+                GROUP BY user_id
             """
-            mycursor.execute(sql, (date,))
+            mycursor.execute(sql, (date,date))
 
             # 2. Store representative images:
             for user_id, image_path in representative_images.items():

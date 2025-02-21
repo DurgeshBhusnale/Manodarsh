@@ -28,6 +28,7 @@ emotion_detector_process = None
 
 
 
+
 def start_emotion_detector():
     """Starts the TestEmotionDetector.py script as a subprocess."""
     try:
