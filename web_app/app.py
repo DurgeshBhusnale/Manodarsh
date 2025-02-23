@@ -8,7 +8,7 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 # Add the parent directory to sys.path
 sys.path.insert(0, parent_dir)  # Insert at the beginning for highest priority
 
-from database_utils import add_user, store_emotion_data, get_soldier_data, end_day, get_daily_averages, start_day, connect_db, get_2_day_average, store_2_day_average, check_notification_needed, get_user_phone_numbers  # Absolute import
+from database_utils import add_user, store_emotion_data, get_soldier_data, end_day, get_daily_averages, start_day, connect_db, get_2_day_average,store_daily_average, store_2_day_average, check_notification_needed, get_user_phone_numbers  # Absolute import
 from collect_images import collect_images
 import datetime
 import base64
@@ -29,7 +29,7 @@ emotion_detector_process = None
 
 
 
-def start_emotion_detector():
+def start_emotion_detector(date_str):
     """Starts the TestEmotionDetector.py script as a subprocess."""
     try:
         root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -37,7 +37,7 @@ def start_emotion_detector():
 
         venv_python = os.path.join("D:\Emotion_detection_v2\.venv\Scripts", "python.exe") # Path to python in venv bin directory
         # Start the subprocess (non-blocking)
-        process = subprocess.Popen([venv_python, emotion_detector_path], cwd=root_dir, env=my_env)  # Set cwd and env
+        process = subprocess.Popen([venv_python, emotion_detector_path,date_str], cwd=root_dir, env=my_env)  # Set cwd and env
         print("Emotion detector started.")
         return process  # Return the process object
 
@@ -191,27 +191,42 @@ def store_data():
     data = request.get_json()
     user_id = data.get("user_id")
     score = data.get("score")
-    date = data.get("date")
+    form_date_str = request.form.get("date")  # Get date from form as string
+    json_date_str = data.get("date")  # Get date from JSON as string
     image_base64 = data.get("image")
+    timestamp = data.get("timestamp")
+
+    if form_date_str:
+        try:
+            date = datetime.datetime.strptime(form_date_str, '%Y-%m-%d').date()  # Convert to date object
+        except ValueError:
+            return jsonify({"message": "Invalid date format in form. Please use %Y-%m-%d"}), 400
+    elif json_date_str:
+        try:
+            date = datetime.datetime.strptime(json_date_str, '%Y-%m-%d').date()  # Convert to date object
+        except ValueError:
+            return jsonify({"message": "Invalid date format in JSON. Please use %Y-%m-%d"}), 400
+    else:
+        date = datetime.date.today()
 
     # Store image in g.daily_images (per request)
     if not hasattr(g, 'daily_images'):
         g.daily_images = {}
     g.daily_images.setdefault(user_id, image_base64)  # Store the first image for the user
 
-    if store_emotion_data(user_id, score, date):  # No image is stored here
+    if store_emotion_data(user_id, score, date, timestamp):  # No image is stored here
         return jsonify({"message": "Data stored successfully"}), 200
     else:
         return jsonify({"message": "Error storing data"}), 500
-
+            
 @app.route("/end_day", methods=["POST"])
 def close_day():
     global emotion_detector_process
-    date_str = request.form.get("date") # Get date from the form
+    date_str = request.form.get("date")  # Get date from the form
     try:
         date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
     except ValueError:
-        return jsonify({"message": "Invalid date format. Please use YYYY-MM-DD"}), 400
+        return jsonify({"message": "Invalid date format. Please use %Y-%m-%d"}), 400
 
     representative_images = getattr(g, 'daily_images', {})  # Retrieve images from g
     try:
@@ -220,7 +235,11 @@ def close_day():
             daily_averages = get_daily_averages(date_obj)  # Get daily averages for all users
 
             if daily_averages:  # Check if daily_averages list is not empty
-                for user_id, average_score, _ in daily_averages:  # Iterate through each user
+                # Store daily averages
+                for user_id, average_score, rep_image in daily_averages:
+                    store_daily_average(user_id, date_obj, average_score, rep_image)
+
+                for user_id, average_score, rep_image in daily_averages:  # Iterate through each user
                     two_day_average = get_2_day_average(user_id, date_obj)
                     if two_day_average is not None:
                         store_2_day_average(user_id, date_obj, two_day_average)
@@ -238,14 +257,13 @@ def close_day():
                 del g.daily_images
 
             return jsonify({"message": "Day ended successfully"}), 200
-
         else:
             return jsonify({"message": "Error ending day"}), 500
 
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         return jsonify({"message": "An unexpected error occurred."}), 500
-
+    
 @app.route("/start_day", methods=["POST"])
 def begin_day():
     global emotion_detector_process
@@ -258,7 +276,7 @@ def begin_day():
         date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()  # Convert to date object
 
         if start_day(date_obj):  # Call your database function (if needed)
-            emotion_detector_process = start_emotion_detector()  # Start the emotion detector
+            emotion_detector_process = start_emotion_detector(date_str)  # Start the emotion detector
             return jsonify({"message": f"Starting day: {date_obj}"}), 200  # Success response
         else:
             return jsonify({"message": f"Error starting day: {date_obj}"}), 500  # Database error

@@ -10,6 +10,7 @@ import base64
 import requests
 import datetime
 import os
+import sys
 
 emotion_dict = {0: "Angry", 1: "Disgusted", 2: "Fearful", 3: "Happy", 4: "Neutral", 5: "Sad", 6: "Surprised"}
 emotion_mapping = {  # Define emotion mapping to scores (weighted)
@@ -67,6 +68,8 @@ def calculate_depression_score(emotions):
     average_score = total_score / sum(0.9 ** (len(emotions) - 1 - i) for i in range(len(emotions)))  # Weighted Average
     return average_score
 
+# Get the date from command-line arguments
+selected_date = sys.argv[1] if len(sys.argv) > 1 else None
 
 while True:
     ret, frame = cap.read()
@@ -112,11 +115,14 @@ while True:
         print(f"Depression Score: {depression_score:.2f}")
 
         if user_id is not None and image_base64 is not None:  # Check if user_id and image are available
+            now = datetime.datetime.now()
+            timestamp = now.strftime("%H:%M:%S")  # Format the time as HH:MM:SS
             data = {
                 "user_id": user_id,
                 "score": depression_score,
-                "date": str(datetime.date.today()),
-                "image": image_base64  # Send encoded image
+                "image": image_base64,  # Send encoded image
+                "date": selected_date, # Use the selected date
+                "timestamp": timestamp #send only time
             }
             response = requests.post("http://127.0.0.1:5000/store_data", json=data) #Send data to the flask backend
 

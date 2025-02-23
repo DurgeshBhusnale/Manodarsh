@@ -6,3 +6,7 @@
 2025-02-20 13:47:28,546 - INFO - Model Filename (Absolute): d:\Emotion_detection_v2\face_recognition_model.pkl
 2025-02-20 13:47:28,546 - INFO - Model saved successfully.
 2025-02-20 13:47:28,546 - INFO - Training completed.
+2025-02-22 12:07:21,669 - INFO - Full Data Directory: D:/Emotion_detection_v2/static/face_data
+2025-02-22 12:15:17,621 - INFO - Model Filename (Absolute): d:\Emotion_detection_v2\face_recognition_model.pkl
+2025-02-22 12:15:17,625 - INFO - Model saved successfully.
+2025-02-22 12:15:17,625 - INFO - Training completed.

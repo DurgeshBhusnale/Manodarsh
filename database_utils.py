@@ -108,6 +108,7 @@ def get_user_id_from_name(name):
     except mysql.connector.Error as err:
         print(f"Something went wrong: {err}")
         return None
+    
 def get_user_phone_numbers(user_id):  # Plural: numbers
     """Retrieves both captain's and wife's phone numbers from the database."""
     try:
@@ -131,7 +132,7 @@ def get_user_phone_numbers(user_id):  # Plural: numbers
         print(f"Error getting user phone numbers: {err}")
         return []
 
-def get_soldier_data():  # This function was missing!
+def get_soldier_data():  
     try:
         with connect_db() as mydb:
             mycursor = mydb.cursor()
@@ -143,12 +144,12 @@ def get_soldier_data():  # This function was missing!
         return None
 
 
-def store_emotion_data(user_id, score, date):  # No image here
+def store_emotion_data(user_id, score, date, timestamp):  # No image here
     try:
         with connect_db() as mydb:
             mycursor = mydb.cursor()
-            sql = "INSERT INTO emotion_data (user_id, score, date) VALUES (%s, %s, %s)"
-            val = (user_id, score, date)
+            sql = "INSERT INTO emotion_data (user_id, score, date, timestamp) VALUES (%s, %s, %s, %s)"
+            val = (user_id, score, date, timestamp)
             mycursor.execute(sql, val)
             mydb.commit()
         return True
@@ -202,10 +203,30 @@ def get_daily_averages(date):
         print(f"Error getting daily averages: {err}")
         return None
 
+def store_daily_average(user_id, date, average_score, representative_image):
+    try:
+        with connect_db() as mydb:
+            mycursor = mydb.cursor()
+            sql = """
+                INSERT INTO daily_averages (user_id, date, average_score, representative_image)
+                VALUES (%s, %s, %s, %s)
+            """
+            val = (user_id, date, average_score, representative_image)
+            mycursor.execute(sql, val)
+            mydb.commit()
+            return True
+    except mysql.connector.Error as err:
+        print(f"Error storing daily average: {err}")
+        mydb.rollback()
+        return False
+
+
 def start_day(date):
     # For now, this just prints a message.  You might want to add logic here later.
     print(f"Starting day: {date}")
     return True  # Indicate success
+
+
 def get_2_day_average(user_id, date):
     """Calculates the 2-day average emotion score for a user."""
     try:
@@ -215,10 +236,10 @@ def get_2_day_average(user_id, date):
             # Calculate the date for yesterday
             yesterday = date - datetime.timedelta(days=1)
 
-            # SQL query to get scores for today and yesterday
+            # SQL query to get scores for today and yesterday from daily_averages
             sql = """
-                SELECT AVG(score)
-                FROM emotion_data
+                SELECT AVG(average_score)
+                FROM daily_averages
                 WHERE user_id = %s AND date IN (%s, %s)
             """
             val = (user_id, date, yesterday)
