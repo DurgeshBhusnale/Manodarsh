@@ -132,16 +132,16 @@ def get_user_phone_numbers(user_id):  # Plural: numbers
         print(f"Error getting user phone numbers: {err}")
         return []
 
-def get_soldier_data():  
-    try:
-        with connect_db() as mydb:
-            mycursor = mydb.cursor()
-            mycursor.execute("SELECT id, name FROM users")  # Get user id and name
-            soldiers = mycursor.fetchall()
-            return soldiers
-    except mysql.connector.Error as err:
-        print(f"Error getting soldier data: {err}")
-        return None
+# def get_soldier_data():  
+#     try:
+#         with connect_db() as mydb:
+#             mycursor = mydb.cursor()
+#             mycursor.execute("SELECT id, name FROM users")  # Get user id and name
+#             soldiers = mycursor.fetchall()
+#             return soldiers
+#     except mysql.connector.Error as err:
+#         print(f"Error getting soldier data: {err}")
+#         return None
 
 
 def store_emotion_data(user_id, score, date, timestamp):  # No image here
@@ -161,27 +161,6 @@ def store_emotion_data(user_id, score, date, timestamp):  # No image here
 def end_day(date): # Receive representative images here
     try:
         with connect_db() as mydb:
-
-            # mycursor = mydb.cursor()
-            #  # 1. Calculate daily averages:
-            # sql = """
-            #     INSERT INTO daily_averages (user_id, date, average_score)
-            #     SELECT user_id, %s, AVG(score)
-            #     FROM emotion_data
-            #     WHERE date = %s
-            #     GROUP BY user_id
-            # """
-            # mycursor.execute(sql, (date,date))           
-            # # 2. Store representative images:
-            # for user_id, image_path in representative_images.items():
-            #     sql = """
-            #     UPDATE daily_averages
-            #     SET representative_image = %s
-            #     WHERE user_id = %s AND date = %s;
-            #     """
-            #     val = (image_path, user_id, date)
-            #     mycursor.execute(sql, val)
-
             mydb.commit()
             return True
     except mysql.connector.Error as err:
@@ -309,6 +288,55 @@ def check_notification_needed(user_id, date, threshold=3.0):  # Default threshol
     except mysql.connector.Error as err:
         print(f"Error checking notification: {err}")
         return False
+
+def get_soldier_data_for_date(date):
+    """Retrieves soldier data for a given date."""
+    try:
+        with connect_db() as mydb:
+            mycursor = mydb.cursor()
+
+            # SQL query to get soldier data (corrected for 'id' column)
+            sql = """
+                SELECT
+                    u.id,
+                    u.name,
+                    u.soldier_id,
+                    u.wife_phone,
+                    u.user_image,
+                    da.average_score,
+                    tda.average_score AS two_day_average
+                FROM
+                    users u
+                INNER JOIN
+                    daily_averages da ON u.id = da.user_id AND da.date = %s
+                LEFT JOIN
+                    two_day_averages tda ON u.id = tda.user_id AND tda.date = %s
+            """
+            val = (date, date)
+            mycursor.execute(sql, val)
+            results = mycursor.fetchall()
+
+            soldier_data = []
+            for row in results:
+                user_id, name, soldier_id, wife_phone, user_image, avg_score, two_day_average = row
+                soldier = {
+                    "user_id": user_id,
+                    "name": name,
+                    "soldier_id": soldier_id,
+                    "wife_phone": wife_phone,
+                    "user_image": user_image,
+                    "avg_score": avg_score,
+                    "2day_avg": two_day_average,
+                    "depression_risk": "High" if two_day_average is not None and two_day_average < 3.0 else "Low", #Assumed threshold of 3.0
+                }
+                soldier_data.append(soldier)
+
+            return soldier_data
+        
+    except mysql.connector.Error as err:
+        print(f"Error getting soldier data: {err}")
+        return None
+
 
 def connect_db():  # Context manager for db connection
     return mysql.connector.connect(

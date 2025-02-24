@@ -1,4 +1,4 @@
-from flask import Flask, redirect, render_template, request, jsonify, g, url_for, current_app
+from flask import Flask, redirect, render_template, request, jsonify, g, url_for, current_app, send_file
 import sys
 import os
 import subprocess 
@@ -8,13 +8,15 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 # Add the parent directory to sys.path
 sys.path.insert(0, parent_dir)  # Insert at the beginning for highest priority
 
-from database_utils import add_user, store_emotion_data, get_soldier_data, end_day, get_daily_averages, start_day, connect_db, get_2_day_average,store_daily_average, store_2_day_average, check_notification_needed, get_user_phone_numbers, calculate_daily_averages  # Absolute import
+import database_utils 
+from database_utils import add_user, store_emotion_data, end_day, get_daily_averages, start_day, connect_db, get_2_day_average,store_daily_average, store_2_day_average, check_notification_needed, get_user_phone_numbers, calculate_daily_averages, get_soldier_data_for_date  # Absolute import
 from collect_images import collect_images
 import datetime
 import base64
 from twilio.rest import Client
 from config import IMAGE_DIR
-import getpass
+from fpdf import FPDF
+from fpdf.enums import XPos, YPos
 
 my_env = os.environ.copy()  # Create a copy of the current environment
 my_env['PYTHONPATH'] = "D:\Emotion_detection_v2\.venv\Lib\site-packages"  # Or similar, depends on your system
@@ -23,7 +25,6 @@ app = Flask(__name__, static_folder='../static', static_url_path='/static')
 
 # Global variable to store the process object
 emotion_detector_process = None
-
 
 
 
@@ -83,6 +84,20 @@ def send_sms_notification(user_id, date, average_score, threshold=3.0):
             print(f"SMS notification sent to {phone_number} for user {user_id} on {date}")
         except Exception as e:
             print(f"Error sending SMS notification to {phone_number}: {e}") # Include the number in the error message
+
+def wrap_text(text, max_width, pdf):
+    """Wraps text to fit within a maximum width and returns a newline-separated string."""
+    words = text.split()
+    lines = []
+    current_line = ""
+    for word in words:
+        if pdf.get_string_width(current_line + word) < max_width:
+            current_line += word + " "
+        else:
+            lines.append(current_line.strip())
+            current_line = word + " "
+    lines.append(current_line.strip())
+    return "\n".join(lines)
 
 
 @app.route("/")
@@ -355,6 +370,55 @@ def get_depressed_soldiers_today():
     except Exception as e:
         print(f"Error fetching depressed soldiers data: {e}")
         return jsonify({"error": "Error fetching data"}), 500
+    
+
+@app.route('/generate_pdf', methods=['GET'])
+def generate_pdf():
+    date_str = request.args.get('date')
+    date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+
+    soldiers = database_utils.get_soldier_data_for_date(date_obj)
+
+    if not soldiers:
+        return "No data found for the selected date.", 404
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", size=12) #replace Arial with Helvetica
+
+    # Report Header
+    pdf.cell(200, 10, text=f"Soldier Emotion Data Report - {date_obj}", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C') #replace txt with text, ln with new_x and new_y
+    pdf.ln(10)
+
+    # Table Header (Modified)
+    table_header = ["Sr. No.", "Soldier Name", "Soldier ID", "Wife Phone", "Avg. Score", "2-Day Avg.", "Depression Risk"]
+    col_widths = [15, 40, 25, 28, 28, 28, 50]  # Adjust column widths as needed
+
+    pdf.set_font("Helvetica", 'B', size=12)
+    for i, header in enumerate(table_header):
+        wrapped_text = wrap_text(header, col_widths[i] - 2, pdf) # Wrap text
+        pdf.cell(col_widths[i], 10, text=wrapped_text, border=1, align='L')
+
+    pdf.ln()
+
+    # Table Data (Modified)
+    pdf.set_font("Helvetica", size=12)
+    sr_no = 1
+    for soldier in soldiers:
+        pdf.cell(col_widths[0], 10, text=str(sr_no), border=1)
+        pdf.cell(col_widths[1], 10, text=soldier["name"], border=1)
+        pdf.cell(col_widths[2], 10, text=soldier["soldier_id"], border=1)
+        pdf.cell(col_widths[3], 10, text=soldier["wife_phone"], border=1)
+        pdf.cell(col_widths[4], 10, text=str(soldier["avg_score"]), border=1)
+        pdf.cell(col_widths[5], 10, text=str(soldier["2day_avg"]), border=1)
+        pdf.cell(col_widths[6], 10, text=soldier["depression_risk"], border=1)
+        pdf.ln()
+        sr_no += 1
+
+    pdf_path = os.path.join(os.getcwd(), "report.pdf") #use absolute path
+    pdf.output(pdf_path)
+
+    return send_file(pdf_path, as_attachment=True)
 
 if __name__ == "__main__":
     app.run(debug=True)

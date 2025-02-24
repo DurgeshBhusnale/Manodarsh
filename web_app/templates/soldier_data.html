@@ -11,6 +11,11 @@
             <button id="show-all" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Show All Soldiers</button>
         </div>
 
+        <label for="reportDate" class="mr-2">Select Date:</label>
+        <input type="date" id="reportDate" value="2025-02-24" class="border rounded p-2 mr-2">
+        <button id="generatePdfButton" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Generate PDF Report</button>
+
+
         <h1 class="text-3xl font-bold mb-4">Soldier Data</h1>
 
         <table class="table-auto w-full border-collapse border border-gray-300">
@@ -34,6 +39,7 @@
         const showAllButton = document.getElementById('show-all');
         const showDepressedButton = document.getElementById('show-depressed');
         const tableBody = document.querySelector('table tbody');
+        const generatePdfButton = document.getElementById('generatePdfButton');
 
         function populateTable(data) {
             tableBody.innerHTML = ''; // Clear the table
@@ -86,6 +92,41 @@
         fetch('/soldier_data')
             .then(response => response.json())
             .then(data => populateTable(data));
+
+
+        // PDF Generation Button:
+        generatePdfButton.addEventListener('click', function() {
+            const selectedDate = document.getElementById('reportDate').value;
+
+            // AJAX Request to Flask Route
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/generate_pdf?date=' + selectedDate, true);
+            xhr.responseType = 'blob'; // Important for handling PDF download
+
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    // Create a Blob from the response
+                    const blob = new Blob([xhr.response], { type: 'application/pdf' });
+
+                    // Create a link element to trigger the download
+                    const link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = 'soldier_report_' + selectedDate + '.pdf'; // Set filename
+
+                    // Append the link to the body and trigger the download
+                    document.body.appendChild(link);
+                    link.click();
+
+                    // Remove the link from the body
+                    document.body.removeChild(link);
+                } else {
+                    alert('Error generating PDF.');
+                }
+            };
+
+            xhr.send();
+        });    
+
 
     </script>
 </body>
