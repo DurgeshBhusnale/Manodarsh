@@ -158,30 +158,29 @@ def store_emotion_data(user_id, score, date, timestamp):  # No image here
         mydb.rollback()
         return False
 
-def end_day(date, representative_images): # Receive representative images here
+def end_day(date): # Receive representative images here
     try:
         with connect_db() as mydb:
-            mycursor = mydb.cursor()
 
-            # 1. Calculate daily averages:
-            sql = """
-                INSERT INTO daily_averages (user_id, date, average_score)
-                SELECT user_id, %s, AVG(score)
-                FROM emotion_data
-                WHERE date = %s
-                GROUP BY user_id
-            """
-            mycursor.execute(sql, (date,date))
-
-            # 2. Store representative images:
-            for user_id, image_path in representative_images.items():
-                sql = """
-                UPDATE daily_averages
-                SET representative_image = %s
-                WHERE user_id = %s AND date = %s;
-                """
-                val = (image_path, user_id, date)
-                mycursor.execute(sql, val)
+            # mycursor = mydb.cursor()
+            #  # 1. Calculate daily averages:
+            # sql = """
+            #     INSERT INTO daily_averages (user_id, date, average_score)
+            #     SELECT user_id, %s, AVG(score)
+            #     FROM emotion_data
+            #     WHERE date = %s
+            #     GROUP BY user_id
+            # """
+            # mycursor.execute(sql, (date,date))           
+            # # 2. Store representative images:
+            # for user_id, image_path in representative_images.items():
+            #     sql = """
+            #     UPDATE daily_averages
+            #     SET representative_image = %s
+            #     WHERE user_id = %s AND date = %s;
+            #     """
+            #     val = (image_path, user_id, date)
+            #     mycursor.execute(sql, val)
 
             mydb.commit()
             return True
@@ -191,11 +190,29 @@ def end_day(date, representative_images): # Receive representative images here
         return False
 
 
+def calculate_daily_averages(date):
+    """Calculates the daily average emotion scores for all users."""
+    try:
+        with connect_db() as mydb:
+            mycursor = mydb.cursor()
+            sql = """
+                SELECT user_id, AVG(score)
+                FROM emotion_data
+                WHERE date = %s
+                GROUP BY user_id
+            """
+            mycursor.execute(sql, (date,))
+            averages = mycursor.fetchall()
+            return averages
+    except mysql.connector.Error as err:
+        print(f"Error calculating daily averages: {err}")
+        return None
+
 def get_daily_averages(date):
     try:
         with connect_db() as mydb:
             mycursor = mydb.cursor()
-            sql = "SELECT user_id, average_score, representative_image FROM daily_averages WHERE date = %s"
+            sql = "SELECT user_id, average_score FROM daily_averages WHERE date = %s"
             mycursor.execute(sql, (date,))
             averages = mycursor.fetchall()
             return averages
@@ -203,15 +220,15 @@ def get_daily_averages(date):
         print(f"Error getting daily averages: {err}")
         return None
 
-def store_daily_average(user_id, date, average_score, representative_image):
+def store_daily_average(user_id, date, average_score):
     try:
         with connect_db() as mydb:
             mycursor = mydb.cursor()
             sql = """
-                INSERT INTO daily_averages (user_id, date, average_score, representative_image)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO daily_averages (user_id, date, average_score)
+                VALUES (%s, %s, %s)
             """
-            val = (user_id, date, average_score, representative_image)
+            val = (user_id, date, average_score)
             mycursor.execute(sql, val)
             mydb.commit()
             return True

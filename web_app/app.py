@@ -8,7 +8,7 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 # Add the parent directory to sys.path
 sys.path.insert(0, parent_dir)  # Insert at the beginning for highest priority
 
-from database_utils import add_user, store_emotion_data, get_soldier_data, end_day, get_daily_averages, start_day, connect_db, get_2_day_average,store_daily_average, store_2_day_average, check_notification_needed, get_user_phone_numbers  # Absolute import
+from database_utils import add_user, store_emotion_data, get_soldier_data, end_day, get_daily_averages, start_day, connect_db, get_2_day_average,store_daily_average, store_2_day_average, check_notification_needed, get_user_phone_numbers, calculate_daily_averages  # Absolute import
 from collect_images import collect_images
 import datetime
 import base64
@@ -24,7 +24,6 @@ app = Flask(__name__, static_folder='../static', static_url_path='/static')
 # Global variable to store the process object
 emotion_detector_process = None
 
-# Twilio credentials (REPLACE THESE WITH YOUR ACTUAL CREDENTIALS)
 
 
 
@@ -222,39 +221,40 @@ def store_data():
 @app.route("/end_day", methods=["POST"])
 def close_day():
     global emotion_detector_process
-    date_str = request.form.get("date")  # Get date from the form
+    date_str = request.form.get("date")
     try:
         date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
     except ValueError:
         return jsonify({"message": "Invalid date format. Please use %Y-%m-%d"}), 400
 
-    representative_images = getattr(g, 'daily_images', {})  # Retrieve images from g
+    # representative_images = getattr(g, 'daily_images', {})
     try:
-        if end_day(date_obj, representative_images):  # Pass images to end_day
-            # Calculate and store 2-day averages
-            daily_averages = get_daily_averages(date_obj)  # Get daily averages for all users
+        if end_day(date_obj):
+            daily_averages = calculate_daily_averages(date_obj)  # Calculate daily averages
 
-            if daily_averages:  # Check if daily_averages list is not empty
+            if daily_averages:
                 # Store daily averages
-                for user_id, average_score, rep_image in daily_averages:
-                    store_daily_average(user_id, date_obj, average_score, rep_image)
+                for user_id, average_score in daily_averages:
+                    store_daily_average(user_id, date_obj, average_score)
 
-                for user_id, average_score, rep_image in daily_averages:  # Iterate through each user
-                    two_day_average = get_2_day_average(user_id, date_obj)
-                    if two_day_average is not None:
-                        store_2_day_average(user_id, date_obj, two_day_average)
+                # Check if there is data for the previous day
+                previous_day = date_obj - datetime.timedelta(days=1)
+                previous_day_averages = calculate_daily_averages(previous_day)
 
-                    # Check for notification (after calculating 2-day average)
-                    if check_notification_needed(user_id, date_obj):
-                        send_sms_notification(user_id, date_obj, two_day_average)
-                        print(f"Notification needed for user {user_id} on {date_obj}")  # Placeholder
+                if previous_day_averages: # only run if there is data for previous day.
+                    for user_id, average_score in daily_averages:
+                        two_day_average = get_2_day_average(user_id, date_obj)
+                        if two_day_average is not None:
+                            store_2_day_average(user_id, date_obj, two_day_average)
+                            if check_notification_needed(user_id, date_obj):
+                                send_sms_notification(user_id, date_obj, two_day_average)
+                                print(f"Notification needed for user {user_id} on {date_obj}")
 
-            stop_emotion_detector(emotion_detector_process)  # Stop detector
-            emotion_detector_process = None  # Reset the process variable
+            stop_emotion_detector(emotion_detector_process)
+            emotion_detector_process = None
 
-            # Clear images after use
-            if hasattr(g, 'daily_images'):
-                del g.daily_images
+            # if hasattr(g, 'daily_images'):
+            #     del g.daily_images
 
             return jsonify({"message": "Day ended successfully"}), 200
         else:
@@ -263,7 +263,7 @@ def close_day():
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         return jsonify({"message": "An unexpected error occurred."}), 500
-    
+        
 @app.route("/start_day", methods=["POST"])
 def begin_day():
     global emotion_detector_process
